@@ -1,16 +1,23 @@
-import pdfParse from "pdf-parse";
+import { createRequire } from "module";
 
-export const extractText=async(file)=>{
+const require = createRequire(import.meta.url);
+const { PDFParse } = require("pdf-parse");
+
+export const extractText = async (file) => {
     try {
-        if(!file)
+        if (!file)
             throw new Error("No file provided");
 
-        if(file.mimetype==="application/pdf"){
-            const data=await pdfParse(file.buffer);
-            return data.text?.trim() || "";
+        if (file.mimetype === "application/pdf") {
+            const data = new PDFParse({
+                data: file.buffer
+            });
+            
+            const result=await data.getText();
+            return result.text?.trim() || "";
         }
 
-        if(file.mimetype==="text/plain")
+        if (file.mimetype === "text/plain")
             return file.buffer.toString("utf-8").trim();
 
         throw new Error("Unsupported file type");
