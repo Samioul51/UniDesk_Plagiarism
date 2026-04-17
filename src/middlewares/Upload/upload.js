@@ -7,11 +7,11 @@ const fileFilter=(req,file,callback)=>{
     const ext=path.extname(file.originalname).toLowerCase();
     const mime=file.mimetype;
 
-    const allowedExtensions=[".pdf",".txt"];
-    const allowedMimeTypes=["application/pdf","text/plain"];
+    const allowedExtensions=[".pdf",".txt",".docx"];
+    const allowedMimeTypes=["application/pdf","text/plain","application/vnd.openxmlformats-officedocument.wordprocessingml.document"];
 
     if(!allowedExtensions.includes(ext) || !allowedMimeTypes.includes(mime))
-        return callback(new Error("Only PDF and Text files are allowed"));
+        return callback(new Error("Only PDF, Docx and Text files are allowed"));
 
     callback(null,true);
 };

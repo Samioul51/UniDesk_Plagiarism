@@ -1,14 +1,10 @@
 import "dotenv/config";
-import express from "express";
-import cors from "cors";
+import app from "./app.js";
 import { connectDB } from "./config/db/dbConnect.js";
 
-const app = express();
 
 const port = process.env.PORT;
 
-app.use(cors());
-app.use(express.json());
 
 connectDB()
     .then(() => {
@@ -21,6 +17,3 @@ connectDB()
         console.log("Database connection failed", error.message);
     });
 
-app.get("/", (req, res) => {
-    res.send("Server Running");
-});
