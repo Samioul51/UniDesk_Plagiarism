@@ -1,0 +1,1 @@
+export const parseBoolean = (value) => value === true || value === "true";

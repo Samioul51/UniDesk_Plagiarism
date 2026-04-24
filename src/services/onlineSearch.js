@@ -24,7 +24,7 @@ export const onlineCheck = async (processedDocs) => {
                 if (!query)
                     continue;
 
-                await delay(1500);
+                await delay(500);
 
                 const searchResults = await searchUsingSerper(query);
 
@@ -53,7 +53,7 @@ export const onlineCheck = async (processedDocs) => {
             const verifiedMatches = [];
 
             for (const item of limitedResults) {
-                await delay(2000);
+                await delay(500);
                 const pageText = await fetchWebPageText(item.url);
 
                 if (!pageText || pageText.length < 100)

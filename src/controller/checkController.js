@@ -1,13 +1,16 @@
+import { sql } from "../config/db/dbConnect.js";
 import { chunkText } from "../services/chunkText.js";
 import { extractText } from "../services/extractText.js";
+import { internalCheck } from "../services/internalCheck.js";
 import { onlineCheck } from "../services/onlineSearch.js";
+import { repositoryCheck } from "../services/repositoryCheck.js";
 import { saveToRepository } from "../services/saveToRepository.js";
-import { preprocessText } from "../utils/preprocessText.js";
+import { parseBoolean } from "../utils/parseBoolean.js";
 
 export const checkPlagiarism = async (req, res) => {
     try {
         const files = req.files;
-        const { storeInRepository } = req.body;
+        const shouldStore = parseBoolean(req.body.storeInRepository);
 
         if (!files || files.length === 0)
             return res.status(400).json({
@@ -15,57 +18,80 @@ export const checkPlagiarism = async (req, res) => {
                 message: "No files uploaded"
             });
 
-        const results = [];
+        const documentResults = [];
         const processedDocs = [];
-        const shouldStore = storeInRepository === ("true" || true);
+        const processingErrors = [];
 
         for (const file of files) {
-            const extractedText = await extractText(file);
-            const preprocessedText = preprocessText(extractedText);
+            try {
+                const extractedText = await extractText(file);
 
-            // For online and db check
+                // For online and db check
 
-            const chunks = chunkText(extractedText);
+                const chunks = chunkText(extractedText);
 
-            let repositoryInfo = null;
+                let repositoryInfo = null;
 
-            if (storeInRepository)
-                repositoryInfo = await saveToRepository({
+                if (shouldStore)
+                    repositoryInfo = await saveToRepository({
+                        fileName: file.originalname,
+                        fullText: extractedText,
+                        chunks
+                    });
+
+                processedDocs.push({
                     fileName: file.originalname,
-                    fullText: extractedText,
+                    mimetype: file.mimetype,
+                    extractedText,
                     chunks
                 });
 
-            processedDocs.push({
-                fileName: file.originalname,
-                mimetype: file.mimetype,
-                extractedText,
-                chunks
-            });
+                documentResults.push({
+                    fileName: file.originalname,
+                    mimetype: file.mimetype,
+                    extractedTextLength: extractedText.length,
+                    totalChunks: chunks.length,
+                    storedInRepository: shouldStore,
+                    repositoryInfo
+                });
 
-            results.push({
-                fileName: file.originalname,
-                mimetype: file.mimetype,
-                extractedTextLength: extractedText.length,
-                totalChunks: chunks.length,
-                storedInRepository: storeInRepository === true,
-                repositoryInfo
-            });
+            } catch (error) {
+                processingErrors.push({
+                    fileName: file.originalname,
+                    message: error.message
+                })
+            }
         }
 
-        const onlineResults = await onlineCheck(processedDocs);
+        if(!processedDocs.length)
+            return res.status(400).json({
+                success:false,
+                message:"All uploaded files failed to process",
+                errors:processingErrors
+            });
+
+        const [internalResults,repositoryResults,onlineResults]=await Promise.all([
+            internalCheck(files),
+            repositoryCheck(files,sql),
+            onlineCheck(processedDocs)
+        ])
 
         return res.status(200).json({
             success: true,
-            message: "Files processed successfully",
+            message: "Plagiarism check completed successfully",
             totalFiles: files.length,
-            results,
-            onlineResults
+            storeInRepository:shouldStore,
+            documents:documentResults,
+            internalResults,
+            repositoryResults,
+            onlineResults,
+            errors: processingErrors
         });
     } catch (error) {
         return res.status(500).json({
             success: false,
-            message: error.message
+            message: "Failed to complete Plagiarism check",
+            error:error.message
         });
     }
 };
