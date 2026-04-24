@@ -1,8 +1,9 @@
 import { buildSimilarityScore } from "../utils/buildSimilarityScore.js";
+import { delay } from "../utils/delay.js";
 import { fetchWebPageText } from "../utils/fetchWebPageText.js";
-import { buildSearchQuery, maxResultsForQuery, pickImportantChunks, searchSearxng } from "../utils/searXNG.js";
+import { buildSearchQuery, maxResultsForQuery, pickImportantChunks, searchUsingSerper } from "../utils/serperUse.js";
 
-const maxFetchedPagesPerDoc = 10;
+const maxFetchedPagesPerDoc = 5;
 const minOnlineScore = 0.1;
 
 export const onlineCheck = async (processedDocs) => {
@@ -23,7 +24,9 @@ export const onlineCheck = async (processedDocs) => {
                 if (!query)
                     continue;
 
-                const searchResults = await searchSearxng(query);
+                await delay(1500);
+
+                const searchResults = await searchUsingSerper(query);
 
                 const mappedResults = searchResults.slice(0, maxResultsForQuery).map((item) => ({
                     title: item.title || "Untitled",
@@ -50,6 +53,7 @@ export const onlineCheck = async (processedDocs) => {
             const verifiedMatches = [];
 
             for (const item of limitedResults) {
+                await delay(2000);
                 const pageText = await fetchWebPageText(item.url);
 
                 if (!pageText || pageText.length < 100)
