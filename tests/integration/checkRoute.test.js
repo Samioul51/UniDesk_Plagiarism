@@ -24,12 +24,7 @@ jest.unstable_mockModule("../../src/middlewares/auth/auth.middleware.js", () => 
     verifyFirebaseToken: (req, res, next) => next()
 }));
 
-let app;
-
-beforeAll(async () => {
-    const module = await import("../../src/app.js");
-    app = module.default;
-});
+const { default: app } = await import("../../src/app.js");
 
 describe("POST /api/check", () => {
     it("returns 400 when no files are uploaded", async () => {
