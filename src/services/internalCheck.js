@@ -1,14 +1,14 @@
-import { extractText }    from "./extractText.js";
-import { chunkText }      from "./chunkText.js";
-import { preprocess, buildTokens } from "./preprocessText.js";
-import { computeTF, computeIDF, computeTFIDF, topSharedTerms } from "./computeTfIdf.js";
+import { extractText } from "./extractText.js";
+import { chunkText }   from "./chunkText.js";
+import { preprocessText as preprocess, buildTokens } from "../utils/preprocessText.js";
+import { computeTF, computeIDF, computeTFIDF, topSharedTerms } from "../utils/computeTfIdf.js";
 import {
   cosineSimilarity,
   winnow,
   jaccardSimilarity,
   combinedScore,
   verdict,
-} from "./calculateCosineSimilarity.js";
+} from "../utils/calculateCosineSimilarity.js";
 
 // Configuration
 const MAX_FILES      = 5;
