@@ -1,3 +1,5 @@
+import axios from "axios";
+
 export const maxQueryChunks = 3;
 export const maxResultsForQuery = 5;
 
