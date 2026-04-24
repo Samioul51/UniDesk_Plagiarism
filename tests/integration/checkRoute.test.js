@@ -54,12 +54,6 @@ jest.unstable_mockModule("multer", () => {
     return { default: multer };
 });
 
-// Authentication mock
-
-jest.unstable_mockModule("../../src/middlewares/auth/auth.middleware.js", () => ({
-    verifyFirebaseToken: (req, res, next) => next()
-}));
-
 const { default: app } = await import("../../src/app.js");
 
 describe("POST /api/check", () => {
