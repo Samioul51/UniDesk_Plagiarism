@@ -9,7 +9,7 @@ jest.unstable_mockModule("../../src/config/db/dbConnect.js", () => ({
 
 // Upload limit mock
 
-jest.unstable_mockModule("../../src/middlewares/Upload/upload.js", () => ({
+jest.unstable_mockModule("../../src/middlewares/upload/upload.js", () => ({
     default: {
         array: () => (req, res, next) => {
             req.files = [];
