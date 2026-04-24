@@ -1,7 +1,7 @@
 import express from "express";
 import { checkPlagiarism } from "../controller/checkController.js";
 import { verifyFirebaseToken } from "../middlewares/auth/auth.middleware.js";
-import upload from "../middlewares/Upload/upload.js";
+import upload from "../middlewares/upload/upload.js";
 
 const router = express.Router();
 
