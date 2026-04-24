@@ -15,6 +15,45 @@ jest.unstable_mockModule("../../src/config/firebase/firebase.js", () => ({
     }
 }));
 
+// Service mocks
+
+jest.unstable_mockModule("../../src/services/chunkText.js", () => ({
+    chunkText: jest.fn()
+}));
+
+jest.unstable_mockModule("../../src/services/extractText.js", () => ({
+    extractText: jest.fn()
+}));
+
+jest.unstable_mockModule("../../src/services/internalCheck.js", () => ({
+    internalCheck: jest.fn()
+}));
+
+jest.unstable_mockModule("../../src/services/onlineSearch.js", () => ({
+    onlineCheck: jest.fn()
+}));
+
+jest.unstable_mockModule("../../src/services/repositoryCheck.js", () => ({
+    repositoryCheck: jest.fn()
+}));
+
+jest.unstable_mockModule("../../src/services/saveToRepository.js", () => ({
+    saveToRepository: jest.fn()
+}));
+
+// Multer mock
+
+jest.unstable_mockModule("multer", () => {
+    const multer = () => ({
+        array: () => (req, res, next) => {
+            req.files = [];
+            next();
+        }
+    });
+    multer.memoryStorage = () => ({});
+    return { default: multer };
+});
+
 // Upload limit mock
 
 jest.unstable_mockModule("../../src/middlewares/upload/upload.js", () => ({
