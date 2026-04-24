@@ -54,17 +54,6 @@ jest.unstable_mockModule("multer", () => {
     return { default: multer };
 });
 
-// Upload limit mock
-
-jest.unstable_mockModule("../../src/middlewares/upload/upload.js", () => ({
-    default: {
-        array: () => (req, res, next) => {
-            req.files = [];
-            next();
-        }
-    }
-}));
-
 // Authentication mock
 
 jest.unstable_mockModule("../../src/middlewares/auth/auth.middleware.js", () => ({
