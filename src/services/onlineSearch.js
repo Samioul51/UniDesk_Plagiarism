@@ -1,4 +1,9 @@
+import { buildSimilarityScore } from "../utils/buildSimilarityScore.js";
+import { fetchWebPageText } from "../utils/fetchWebPageText.js";
 import { buildSearchQuery, maxResultsForQuery, pickImportantChunks, searchSearxng } from "../utils/searXNG.js";
+
+const maxFetchedPagesPerDoc = 10;
+const minOnlineScore = 0.1;
 
 export const onlineCheck = async (processedDocs) => {
     try {
@@ -14,6 +19,10 @@ export const onlineCheck = async (processedDocs) => {
 
             for (const chunk of importantChunks) {
                 const query = buildSearchQuery(chunk);
+
+                if (!query)
+                    continue;
+
                 const searchResults = await searchSearxng(query);
 
                 const mappedResults = searchResults.slice(0, maxResultsForQuery).map((item) => ({
@@ -37,14 +46,41 @@ export const onlineCheck = async (processedDocs) => {
                 }
             }
 
+            const limitedResults = uniqueResults.slice(0, maxFetchedPagesPerDoc);
+            const verifiedMatches = [];
+
+            for (const item of limitedResults) {
+                const pageText = await fetchWebPageText(item.url);
+
+                if (!pageText || pageText.length < 100)
+                    continue;
+
+                const similarity = buildSimilarityScore(doc.extractedText, pageText);
+
+                if (similarity.combined < minOnlineScore)
+                    continue;
+
+                verifiedMatches.push({
+                    title: item.title,
+                    url: item.url,
+                    snippet: item.content,
+                    query: item.query,
+                    ...similarity,
+                });
+            }
+
+            verifiedMatches.sort((a, b) => b.combined - a.combined);
+
             finalResults.push({
                 fileName: doc.fileName,
                 totalQueries: importantChunks.length,
-                totalMatches: uniqueResults.length,
-                matches: uniqueResults
+                totalCandidates: uniqueResults.length,
+                totalMatches: verifiedMatches.length,
+                highestScore: verifiedMatches[0]?.combined || 0,
+                matches: verifiedMatches
             });
         }
-        
+
         return finalResults;
     } catch (error) {
         throw new Error(error.message);
