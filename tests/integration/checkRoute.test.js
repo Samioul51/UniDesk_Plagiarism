@@ -7,6 +7,14 @@ jest.unstable_mockModule("../../src/config/db/dbConnect.js", () => ({
     sql: {}
 }));
 
+// Firebase mock
+
+jest.unstable_mockModule("../../src/config/firebase/firebase.js", () => ({
+    auth: {
+        verifyIdToken: jest.fn()
+    }
+}));
+
 // Upload limit mock
 
 jest.unstable_mockModule("../../src/middlewares/upload/upload.js", () => ({
