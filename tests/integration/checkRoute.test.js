@@ -1,47 +1,45 @@
 import request from "supertest";
 import { jest } from "@jest/globals";
+import { fileURLToPath } from "url";
+import path from "path";
 
-// dbConnect mock
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const root = path.resolve(__dirname, "../../");
 
-jest.unstable_mockModule("../../src/config/db/dbConnect.js", () => ({
+// Services mock
+
+jest.unstable_mockModule(path.join(root, "src/config/db/dbConnect.js"), () => ({
     sql: {}
 }));
 
-// Firebase mock
-
-jest.unstable_mockModule("../../src/config/firebase/firebase.js", () => ({
-    auth: {
-        verifyIdToken: jest.fn()
-    }
+jest.unstable_mockModule(path.join(root, "src/config/firebase/firebase.js"), () => ({
+    auth: { verifyIdToken: jest.fn() }
 }));
 
-// Service mocks
-
-jest.unstable_mockModule("../../src/services/chunkText.js", () => ({
+jest.unstable_mockModule(path.join(root, "src/services/chunkText.js"), () => ({
     chunkText: jest.fn()
 }));
 
-jest.unstable_mockModule("../../src/services/extractText.js", () => ({
+jest.unstable_mockModule(path.join(root, "src/services/extractText.js"), () => ({
     extractText: jest.fn()
 }));
 
-jest.unstable_mockModule("../../src/services/internalCheck.js", () => ({
+jest.unstable_mockModule(path.join(root, "src/services/internalCheck.js"), () => ({
     internalCheck: jest.fn()
 }));
 
-jest.unstable_mockModule("../../src/services/onlineSearch.js", () => ({
+jest.unstable_mockModule(path.join(root, "src/services/onlineSearch.js"), () => ({
     onlineCheck: jest.fn()
 }));
 
-jest.unstable_mockModule("../../src/services/repositoryCheck.js", () => ({
+jest.unstable_mockModule(path.join(root, "src/services/repositoryCheck.js"), () => ({
     repositoryCheck: jest.fn()
 }));
 
-jest.unstable_mockModule("../../src/services/saveToRepository.js", () => ({
+jest.unstable_mockModule(path.join(root, "src/services/saveToRepository.js"), () => ({
     saveToRepository: jest.fn()
 }));
-
-// Multer mock
 
 jest.unstable_mockModule("multer", () => {
     const multer = () => ({
@@ -53,6 +51,10 @@ jest.unstable_mockModule("multer", () => {
     multer.memoryStorage = () => ({});
     return { default: multer };
 });
+
+jest.unstable_mockModule(path.join(root, "src/middlewares/auth/auth.middleware.js"), () => ({
+    verifyFirebaseToken: (req, res, next) => next()
+}));
 
 const { default: app } = await import("../../src/app.js");
 
