@@ -1,5 +1,5 @@
 import { extractText } from "./extractText.js";
-import { chunkText }   from "./chunkText.js";
+import { chunkText } from "./chunkText.js";
 import { preprocessText as preprocess, buildTokens } from "../utils/preprocessText.js";
 import { computeTF, computeIDF, computeTFIDF, topSharedTerms } from "../utils/computeTfIdf.js";
 import {
@@ -11,16 +11,14 @@ import {
 } from "../utils/calculateCosineSimilarity.js";
 
 // Configuration
-const NGRAM_RANGE      = [1, 3];
-const WINNOW_K         = 5;
-const WINNOW_W         = 4;
-const TFIDF_WEIGHT     = 0.5;
-const FP_WEIGHT        = 0.5;
+
+const NGRAM_RANGE = [1, 3];
+const WINNOW_K = 5;
+const WINNOW_W = 4;
+const TFIDF_WEIGHT = 0.5;
+const FP_WEIGHT = 0.5;
 const DEFAULT_THRESHOLD = 0.1;
 
-//  DB QUERIES
-
-// Fetch all stored documents (id, file_name, full_text).
 async function fetchAllDocuments(sql) {
   return sql`
     SELECT id, file_name, full_text
@@ -29,7 +27,6 @@ async function fetchAllDocuments(sql) {
   `;
 }
 
-// Fetch all chunks for a specific document.
 async function fetchChunksForDocument(sql, documentId) {
   return sql`
     SELECT chunk_index, chunk_text
@@ -39,10 +36,8 @@ async function fetchChunksForDocument(sql, documentId) {
   `;
 }
 
-//  HELPERS  (shared with internalCheck — kept local to avoid
-//  circular imports; consider extracting to a shared utils file)
+//  Helper functios
 
-// Build a TF-IDF vector for a single document given a pre-built IDF table.
 function buildVector(rawText, idf) {
   const tokens = preprocess(rawText);
   const allTokens = buildTokens(tokens, NGRAM_RANGE);
@@ -50,7 +45,6 @@ function buildVector(rawText, idf) {
   return computeTFIDF(tf, idf);
 }
 
-// Build a shared IDF table from an array of raw texts.
 function buildCorpusIDF(rawTexts) {
   const tokenizedDocs = rawTexts.map((t) =>
     buildTokens(preprocess(t), NGRAM_RANGE)
@@ -58,15 +52,14 @@ function buildCorpusIDF(rawTexts) {
   return computeIDF(tokenizedDocs);
 }
 
-// Find the top-K most similar DB chunks to a given uploaded document's chunks.
 function analyseChunkOverlap(uploadedChunks, repoChunks, topK = 5) {
   if (!uploadedChunks.length || !repoChunks.length) {
     return { avgChunkSimilarity: 0, maxChunkSimilarity: 0, hotspots: [] };
   }
 
-  const allChunks    = [...uploadedChunks, ...repoChunks];
+  const allChunks = [...uploadedChunks, ...repoChunks];
   const allTokenized = allChunks.map((c) =>
-    buildTokens(preprocess(c), [1, 2])   // unigrams + bigrams for speed
+    buildTokens(preprocess(c), [1, 2])
   );
   const chunkIDF = computeIDF(allTokenized);
 
@@ -76,15 +69,15 @@ function analyseChunkOverlap(uploadedChunks, repoChunks, topK = 5) {
   };
 
   const uploadedVecs = uploadedChunks.map(buildChunkVec);
-  const repoVecs     = repoChunks.map(buildChunkVec);
+  const repoVecs = repoChunks.map(buildChunkVec);
 
   let totalBest = 0;
-  let maxScore  = 0;
+  let maxScore = 0;
   const hotspots = [];
 
   for (let i = 0; i < uploadedVecs.length; i++) {
     let bestScore = 0;
-    let bestJ     = 0;
+    let bestJ = 0;
 
     for (let j = 0; j < repoVecs.length; j++) {
       const score = cosineSimilarity(uploadedVecs[i], repoVecs[j]);
@@ -100,15 +93,14 @@ function analyseChunkOverlap(uploadedChunks, repoChunks, topK = 5) {
   }
 
   return {
-    avgChunkSimilarity : +(totalBest / uploadedVecs.length).toFixed(4),
-    maxChunkSimilarity : +maxScore.toFixed(4),
-    hotspots           : hotspots.sort((a, b) => b.score - a.score).slice(0, topK),
+    avgChunkSimilarity: +(totalBest / uploadedVecs.length).toFixed(4),
+    maxChunkSimilarity: +maxScore.toFixed(4),
+    hotspots: hotspots.sort((a, b) => b.score - a.score).slice(0, topK),
   };
 }
 
-//  MAIN SERVICE
+// Main function
 
-// Compare each uploaded file against every document in the DB repository.
 export async function repositoryCheck(files, sql, opts = {}) {
   const { threshold = DEFAULT_THRESHOLD } = opts;
 
@@ -116,15 +108,14 @@ export async function repositoryCheck(files, sql, opts = {}) {
     throw new Error("No files provided for repository check.");
   }
 
-  // Step 1: Extract text from every uploaded file
   const uploadedDocs = [];
-  const errors       = [];
+  const errors = [];
 
   await Promise.all(
     files.map(async (file) => {
       try {
         const rawText = await extractText(file);
-        const chunks  = chunkText(rawText);
+        const chunks = chunkText(rawText);
         uploadedDocs.push({ name: file.originalname, rawText, chunks });
       } catch (err) {
         errors.push(file.originalname);
@@ -137,32 +128,29 @@ export async function repositoryCheck(files, sql, opts = {}) {
     throw new Error("All uploaded files failed text extraction.");
   }
 
-  // Step 2: Load all repository documents
   const repoDocs = await fetchAllDocuments(sql);
 
   if (repoDocs.length === 0) {
     return {
-      totalUploaded : uploadedDocs.length,
-      totalRepoDoc  : 0,
-      results       : uploadedDocs.map((d) => ({
-        fileName    : d.name,
-        matches     : [],
+      totalUploaded: uploadedDocs.length,
+      totalRepoDoc: 0,
+      results: uploadedDocs.map((d) => ({
+        fileName: d.name,
+        matches: [],
         highestScore: 0,
-        topVerdict  : verdict(0),
+        topVerdict: verdict(0),
       })),
-      summary : { totalMatches: 0, highRisk: 0, mediumRisk: 0, lowRisk: 0 },
+      summary: { totalMatches: 0, highRisk: 0, mediumRisk: 0, lowRisk: 0 },
       errors,
-      message : "Repository is empty. No comparisons performed.",
+      message: "Repository is empty. No comparisons performed.",
     };
   }
 
-  // Step 3: Fetch chunks for every repo document
-  //   (done in parallel; results keyed by document id)
-  const repoChunkMap = new Map();  // Map<documentId, string[]>
+  const repoChunkMap = new Map();
 
   await Promise.all(
     repoDocs.map(async (doc) => {
-      const rows   = await fetchChunksForDocument(sql, doc.id);
+      const rows = await fetchChunksForDocument(sql, doc.id);
       const chunks = rows
         .sort((a, b) => a.chunk_index - b.chunk_index)
         .map((r) => r.chunk_text);
@@ -170,22 +158,19 @@ export async function repositoryCheck(files, sql, opts = {}) {
     })
   );
 
-  // Step 4: Build a shared IDF across uploaded + repo docs
   const allRawTexts = [
     ...uploadedDocs.map((d) => d.rawText),
     ...repoDocs.map((d) => d.full_text),
   ];
   const idf = buildCorpusIDF(allRawTexts);
 
-  // Pre-compute vectors and fingerprints for all repo documents
-  const repoVectors      = repoDocs.map((d) => buildVector(d.full_text, idf));
+  const repoVectors = repoDocs.map((d) => buildVector(d.full_text, idf));
   const repoFingerprints = repoDocs.map((d) => winnow(d.full_text, WINNOW_K, WINNOW_W));
 
-  // Step 5: Compare each uploaded file against every repo document
   const results = [];
 
   for (const uploaded of uploadedDocs) {
-    const uploadedVector      = buildVector(uploaded.rawText, idf);
+    const uploadedVector = buildVector(uploaded.rawText, idf);
     const uploadedFingerprint = winnow(uploaded.rawText, WINNOW_K, WINNOW_W);
 
     const matches = [];
@@ -194,61 +179,59 @@ export async function repositoryCheck(files, sql, opts = {}) {
       const repoDoc = repoDocs[r];
 
       const tfidfSim = cosineSimilarity(uploadedVector, repoVectors[r]);
-      const fpSim    = jaccardSimilarity(uploadedFingerprint, repoFingerprints[r]);
-      const score    = combinedScore(tfidfSim, fpSim, TFIDF_WEIGHT, FP_WEIGHT);
+      const fpSim = jaccardSimilarity(uploadedFingerprint, repoFingerprints[r]);
+      const score = combinedScore(tfidfSim, fpSim, TFIDF_WEIGHT, FP_WEIGHT);
 
       if (score <= threshold) continue;
 
       const { phrases, words } = topSharedTerms(uploadedVector, repoVectors[r]);
-      const intersection       = [...uploadedFingerprint].filter((h) => repoFingerprints[r].has(h));
-      const unionSize          = uploadedFingerprint.size + repoFingerprints[r].size - intersection.length;
+      const intersection = [...uploadedFingerprint].filter((h) => repoFingerprints[r].has(h));
+      const unionSize = uploadedFingerprint.size + repoFingerprints[r].size - intersection.length;
 
-      const repoChunks  = repoChunkMap.get(repoDoc.id) ?? [];
+      const repoChunks = repoChunkMap.get(repoDoc.id) ?? [];
       const chunkResult = analyseChunkOverlap(uploaded.chunks, repoChunks);
 
       matches.push({
-        uploadedFile       : uploaded.name,
-        repoDocumentId     : repoDoc.id,
-        repoFileName       : repoDoc.file_name,
-        tfidfScore         : +tfidfSim.toFixed(4),
-        fpScore            : +fpSim.toFixed(4),
-        combined           : +score.toFixed(4),
-        verdict            : verdict(score),
-        topPhrases         : phrases.map((p) => p.replace(/_/g, " ")),
-        topWords           : words,
-        sharedHashes       : intersection.length,
-        totalHashes        : unionSize,
-        avgChunkSimilarity : chunkResult.avgChunkSimilarity,
-        maxChunkSimilarity : chunkResult.maxChunkSimilarity,
-        hotspots           : chunkResult.hotspots,
+        uploadedFile: uploaded.name,
+        repoDocumentId: repoDoc.id,
+        repoFileName: repoDoc.file_name,
+        tfidfScore: +tfidfSim.toFixed(4),
+        fpScore: +fpSim.toFixed(4),
+        combined: +score.toFixed(4),
+        verdict: verdict(score),
+        topPhrases: phrases.map((p) => p.replace(/_/g, " ")),
+        topWords: words,
+        sharedHashes: intersection.length,
+        totalHashes: unionSize,
+        avgChunkSimilarity: chunkResult.avgChunkSimilarity,
+        maxChunkSimilarity: chunkResult.maxChunkSimilarity,
+        hotspots: chunkResult.hotspots,
       });
     }
 
-    // Sort matches by combined score descending
     matches.sort((a, b) => b.combined - a.combined);
 
     const topMatch = matches[0] ?? null;
 
     results.push({
-      fileName    : uploaded.name,
+      fileName: uploaded.name,
       matches,
       highestScore: topMatch ? topMatch.combined : 0,
-      topVerdict  : topMatch ? topMatch.verdict  : verdict(0),
+      topVerdict: topMatch ? topMatch.verdict : verdict(0),
     });
   }
 
-  // Step 6: Aggregate summary
   const allMatches = results.flatMap((r) => r.matches);
   const summary = {
-    totalMatches : allMatches.length,
-    highRisk     : allMatches.filter((m) => m.verdict.risk === "HIGH").length,
-    mediumRisk   : allMatches.filter((m) => m.verdict.risk === "MEDIUM").length,
-    lowRisk      : allMatches.filter((m) => m.verdict.risk === "LOW").length,
+    totalMatches: allMatches.length,
+    highRisk: allMatches.filter((m) => m.verdict.risk === "HIGH").length,
+    mediumRisk: allMatches.filter((m) => m.verdict.risk === "MEDIUM").length,
+    lowRisk: allMatches.filter((m) => m.verdict.risk === "LOW").length,
   };
 
   return {
-    totalUploaded : uploadedDocs.length,
-    totalRepoDoc  : repoDocs.length,
+    totalUploaded: uploadedDocs.length,
+    totalRepoDoc: repoDocs.length,
     results,
     summary,
     errors,
